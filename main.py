@@ -59,7 +59,7 @@ async def show_days(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append(row)
 
     await query.edit_message_text(
-        "📅 Select a Ramadan day:",
+        "📅 Select Your day:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -76,7 +76,7 @@ async def routine_day(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sub1, sub2 = ROUTINE[index]
 
     text = f"""
-🌙 Ramadan {day:02d} Routine
+😵‍💫 in Day {day:02d} Routine
 
 🌅 7:00–8:00 AM — {sub1}
 ☀️ 2:00–3:00 PM — {sub2}
