@@ -3,101 +3,88 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# Enable logging
+# 1. Logging setup
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-# Load token from environment variable
+# 2. Get Token from Railway Environment Variables
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Define the 4-day repeating schedule cycle
-SCHEDULE_CYCLE = {
-    0: ("সাধারণ গণিত", "সাধারণ বিজ্ঞান"),      # Day 1, 5, 9...
-    1: ("বাংলা", "ইংরেজি"),                   # Day 2, 6, 10...
-    2: ("ধর্ম", "কৃষিশিক্ষা"),                  # Day 3, 7, 11...
-    3: ("বা.ও বিশ্ব প.", "তথ্য ও যোগাযোগ প্রযুক্তি") # Day 4, 8, 12...
+# 4-day study cycle logic
+SCHEDULE = {
+    0: ("সাধারণ গণিত", "সাধারণ বিজ্ঞান"),
+    1: ("বাংলা", "ইংরেজি"),
+    2: ("ধর্ম", "কৃষিশিক্ষা"),
+    3: ("বা.ও বিশ্ব প.", "তথ্য ও যোগাযোগ প্রযুক্তি")
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Sends a message with a button to open the list."""
     keyboard = [[InlineKeyboardButton("➡️ /list", callback_data="show_list")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await update.message.reply_text(
         "📚 Ramadan Study Routine Bot\nClick the button below to see the routine.",
         reply_markup=reply_markup
     )
 
-async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Shows the 30 days of Ramadan as buttons."""
+async def list_days(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     keyboard = []
-    # Create 30 buttons, 3 buttons per row
     row = []
     for i in range(1, 31):
-        day_str = f"{i:02d}"
-        row.append(InlineKeyboardButton(f"Ramadan {day_str}", callback_data=f"day_{i}"))
+        row.append(InlineKeyboardButton(f"Ramadan {i:02d}", callback_data=f"day_{i}"))
         if len(row) == 3:
             keyboard.append(row)
             row = []
-    if row:
-        keyboard.append(row)
+    if row: keyboard.append(row)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("📅 Select a day to see the routine:", reply_markup=reply_markup)
+    msg_text = "📅 Select a day to see the routine:"
+    
+    if query:
+        await query.edit_message_text(msg_text, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(msg_text, reply_markup=reply_markup)
 
-async def handle_day_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles clicks on specific Ramadan days."""
+async def day_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     day_num = int(query.data.split("_")[1])
+    cycle_idx = (day_num - 1) % 4
+    sub1, sub2 = SCHEDULE[cycle_idx]
     
-    # Calculate which subjects apply based on the 4-day cycle
-    # We use (day_num - 1) % 4 to map 1->0, 2->1, 3->2, 4->3, 5->0...
-    cycle_index = (day_num - 1) % 4
-    subject1, subject2 = SCHEDULE_CYCLE[cycle_index]
-    
-    # Exception for Ramadan 09, 10, 18, 19, 27, 28 (Math/Science blocks in image)
-    # The image shows some specific double-ups, but the logic below follows 
-    # the 4-day pattern provided in your prompt and the image's general flow.
-    
-    response = (
+    text = (
         f"🌙 *Ramadan {day_num:02d} Routine*\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"🌅 7:00–8:00 AM — {subject1}\n"
-        f"☀️ 2:00–3:00 PM — {subject2}\n"
+        f"🌅 7:00–8:00 AM — {sub1}\n"
+        f"☀️ 2:00–3:00 PM — {sub2}\n"
         f"🌙 9:00–10:00 PM — রিভিশন\n"
         f"━━━━━━━━━━━━━━━"
     )
-
-    # Add a back button to return to the list
+    
     keyboard = [[InlineKeyboardButton("🔙 Back to List", callback_data="show_list")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.edit_message_text(text=response, reply_markup=reply_markup, parse_mode="Markdown")
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 def main():
-    """Start the bot."""
     if not BOT_TOKEN:
-        print("Error: BOT_TOKEN not found in environment variables.")
+        print("Error: Please set BOT_TOKEN in Railway Variables!")
         return
 
-    # Create the Application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # In v20+, we use Application instead of Updater
+    app = Application.builder().token(BOT_TOKEN).build()
 
-    # Handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("list", show_list)) # Also support /list command
-    application.add_handler(CallbackQueryHandler(show_list, pattern="^show_list$"))
-    application.add_handler(CallbackQueryHandler(handle_day_click, pattern="^day_"))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("list", list_days))
+    app.add_handler(CallbackQueryHandler(list_days, pattern="^show_list$"))
+    app.add_handler(CallbackQueryHandler(day_details, pattern="^day_"))
 
-    # Run the bot
-    print("Bot is running...")
-    application.run_polling()
+    print("Bot is starting...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
+    
