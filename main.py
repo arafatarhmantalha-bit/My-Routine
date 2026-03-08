@@ -46,7 +46,7 @@ async def show_days(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         row.append(
             InlineKeyboardButton(
-                f"Your {i:02d}",
+                f"Your Day{i:02d}",
                 callback_data=f"day_{i}"
             )
         )
