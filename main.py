@@ -24,11 +24,11 @@ ROUTINE = {
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
-        [InlineKeyboardButton("📅 View Ramadan Routine", callback_data="routine")]
+        [InlineKeyboardButton("📅 View Your in day Routine", callback_data="routine")]
     ]
 
     await update.message.reply_text(
-        "📚 Ramadan Study Routine Bot\n\nClick the button below to see your routine.",
+        "📚 NYT Study Routine Bot\n\nClick the button below to see your routine.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
